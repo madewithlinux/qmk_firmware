@@ -1,62 +1,43 @@
 #include QMK_KEYBOARD_H
 // make kbdfans/kbd75:madewithlinux:dfu
 
-// TODO: get this to compile
-// // Light LEDs 6 to 9 and 12 to 15 red when caps lock is active. Hard to ignore!
-// const rgblight_segment_t PROGMEM my_capslock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {6, 4, HSV_RED},       // Light 4 LEDs, starting with LED 6
-//     {12, 4, HSV_RED}       // Light 4 LEDs, starting with LED 12
-// );
-// // Light LEDs 9 & 10 in cyan when keyboard layer 1 is active
-// const rgblight_segment_t PROGMEM my_layer1_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {9, 2, HSV_CYAN}
-// );
-// // Light LEDs 11 & 12 in purple when keyboard layer 2 is active
-// const rgblight_segment_t PROGMEM my_layer2_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {11, 2, HSV_PURPLE}
-// );
-// // Light LEDs 13 & 14 in green when keyboard layer 3 is active
-// const rgblight_segment_t PROGMEM my_layer3_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {13, 2, HSV_GREEN}
-// );
-
-// // Now define the array of layers. Later layers take precedence
-// const rgblight_segment_t* const PROGMEM my_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
-//     my_capslock_layer,
-//     my_layer1_layer,    // Overrides caps lock layer
-//     my_layer2_layer,    // Overrides other layers
-//     my_layer3_layer     // Overrides other layers
-// );
-
-// void keyboard_post_init_user(void) {
-//     // Enable the LED layers
-//     rgblight_layers = my_rgb_layers;
-// }
-
-// bool led_update_user(led_t led_state) {
-//     rgblight_set_layer_state(0, led_state.caps_lock);
-//     return true;
-// }
-
-
 enum custom_keycodes {
-    QMKBEST = SAFE_RANGE,
-    TABALT,
+    TABALT = SAFE_RANGE,
     T_TALT,
 };
 
 bool is_tabalt_active = false;
 
+const rgblight_segment_t PROGMEM _yes_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_GREEN} );
+const rgblight_segment_t PROGMEM _no_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_RED} );
+const rgblight_segment_t PROGMEM _tabalt_layer[] = RGBLIGHT_LAYER_SEGMENTS( {0, 2, HSV_WHITE} );
+
+const rgblight_segment_t* const PROGMEM _rgb_layers[] =
+    RGBLIGHT_LAYERS_LIST( _yes_layer, _no_layer, _tabalt_layer );
+
+void keyboard_post_init_user(void) {
+    rgblight_layers = _rgb_layers;
+}
+
+bool led_update_user(led_t led_state) {
+    rgblight_set_layer_state(2, is_tabalt_active);
+    return true;
+}
+
+void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case T_TALT:
+            if (!record->event.pressed) {
+                rgblight_blink_layer(is_tabalt_active ? 0 : 1, 500);
+                // make sure the other layer is off
+                rgblight_set_layer_state(is_tabalt_active ? 1 : 0, 0);
+            }
+            break;
+    }
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-    case QMKBEST:
-        if (record->event.pressed) {
-            // when keycode QMKBEST is pressed
-            SEND_STRING("QMK is the best thing ever!");
-        } else {
-            // when keycode QMKBEST is released
-        }
-        break;
     case T_TALT:
         if (record->event.pressed) {
             if (is_tabalt_active) {
@@ -69,6 +50,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             is_tabalt_active = !is_tabalt_active;
         }
         break;
+
     case TABALT:
         if (record->event.pressed) {
             if (is_tabalt_active && (get_mods() == MOD_BIT(KC_LALT))) {
