@@ -1,12 +1,75 @@
 #include QMK_KEYBOARD_H
 // make kbdfans/kbd75:madewithlinux:dfu
 
+// We delay showing the popup so that fast Alt+Tab users aren't
+// disturbed by the popup briefly flashing.
+#define POPUP_DELAY_TIMEOUT 250
+
 enum custom_keycodes {
     TABALT = SAFE_RANGE,
-    T_TALT,
+    TOGTALT,
 };
 
 bool is_tabalt_active = false;
+uint16_t alt_tab_timer = 0;
+bool alt_tab_waiting = false;
+bool in_alt_tab_menu = false;
+/*
+Alt-Tab logic:
+
+do_tabalt() {
+    left alt down
+    tap right alt
+    tap tab
+    left alt up
+
+    alt_tab_waiting = false;
+    in_alt_tab_menu = false;
+}
+
+alt_tab_waiting && alt released => do_tabalt()
+
+
+alt_tab_waiting && alt_tab_timer expires => {
+    // at this point it becomes a regular alt-tab
+    tap tab
+    alt_tab_waiting = false;
+    in_alt_tab_menu = true;
+}
+
+
+tab:
+in_alt_tab_menu? {
+    yes => it's just a regular tab
+}
+pressed or released? {
+    pressed =>
+        alt_tab_waiting? {
+            yes =>
+                tap tab
+                register tab down
+                alt_tab_waiting = false;
+                in_alt_tab_menu = true;
+            no  =>
+                alt_tab_waiting = true;
+                alt_tab_timer = timer_read();
+        }
+    released =>
+        alt_tab_waiting? {
+            yes =>
+                do nothing, I guess?
+            no  =>
+                TODO: I think this is invalid state?
+        }
+}
+
+normal alt tab fallback logic:
+    alt_tab_waiting   => custom
+    in_alt_tab_menu   => normal
+    !is_tabalt_active => normal
+    alt isn't down    => normal
+
+*/
 
 const rgblight_segment_t PROGMEM _yes_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_GREEN} );
 const rgblight_segment_t PROGMEM _no_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_RED} );
@@ -26,7 +89,7 @@ bool led_update_user(led_t led_state) {
 
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-        case T_TALT:
+        case TOGTALT:
             if (!record->event.pressed) {
                 rgblight_blink_layer(is_tabalt_active ? 0 : 1, 500);
                 // make sure the other layer is off
@@ -36,9 +99,30 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
+inline void do_tabalt(void) {
+    register_code(KC_LALT);
+    tap_code(KC_RALT);
+    tap_code(KC_TAB);
+    unregister_code(KC_LALT);
+
+    alt_tab_waiting = false;
+    in_alt_tab_menu = false;
+}
+
+void matrix_scan_user(void) {
+  if (alt_tab_waiting) {
+    if (timer_elapsed(alt_tab_timer) > POPUP_DELAY_TIMEOUT) {
+        // at this point it becomes a regular alt-tab
+        tap_code(KC_TAB);
+        alt_tab_waiting = false;
+        in_alt_tab_menu = true;
+    }
+  }
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-    case T_TALT:
+    case TOGTALT:
         if (record->event.pressed) {
             if (is_tabalt_active) {
                 backlight_disable();
@@ -52,13 +136,39 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         break;
 
     case TABALT:
-        if (record->event.pressed) {
-            if (is_tabalt_active && (get_mods() == MOD_BIT(KC_LALT))) {
-                tap_code(KC_RALT);
+        if (!alt_tab_waiting && (!is_tabalt_active || in_alt_tab_menu || (get_mods() != MOD_BIT(KC_LALT)))) {
+            // normal tab functionalty
+            if (record->event.pressed) {
+                register_code(KC_TAB);
+            } else {
+                unregister_code(KC_TAB);
             }
-            register_code(KC_TAB);
         } else {
-            unregister_code(KC_TAB);
+            // special tabalt functionality
+            if (record->event.pressed) {
+                if (alt_tab_waiting) {
+                    tap_code(KC_TAB);
+                    register_code(KC_TAB);
+                    alt_tab_waiting = false;
+                    in_alt_tab_menu = true;
+                } else {
+                    alt_tab_waiting = true;
+                    alt_tab_timer = timer_read();
+                }
+            } else {
+                // TODO: unknown what to do here (if anything)
+            }
+        }
+        break;
+    case KC_LALT:
+        if (!record->event.pressed) { // on release
+            if (alt_tab_waiting) {
+                do_tabalt();
+            }
+            // just reset all the state
+            alt_tab_timer = 0;
+            alt_tab_waiting = false;
+            in_alt_tab_menu = false;
         }
         break;
 
@@ -84,7 +194,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______,  RGB_TOG,  RGB_MOD,  RGB_HUI,  RGB_HUD,  RGB_SAI,  RGB_SAD,  RGB_VAI,  RGB_VAD,  RGB_SPI,  RGB_SPD,  _______,  _______,  _______,            _______,
     _______,  VLK_TOG, RGB_RMOD,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                      _______,  _______,
     _______,  _______,  _______,  _______,  BL_DEC,   BL_TOGG,  BL_INC ,   BL_STEP, _______,  _______,  _______,  _______,  KC_APP ,            _______,  _______,
-    _______,  _______,  _______,                      T_TALT ,  _______,  _______,                      MO(2)  ,  _______,  MO(2)  ,  _______,  _______,  _______
+    _______,  _______,  _______,                      TOGTALT,  _______,  _______,                      MO(2)  ,  _______,  MO(2)  ,  _______,  _______,  _______
   ),
 
   [2] = LAYOUT(
