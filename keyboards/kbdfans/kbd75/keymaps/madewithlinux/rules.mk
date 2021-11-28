@@ -1,2 +1,4 @@
 # rules.mk
 VELOCIKEY_ENABLE = yes
+CONSOLE_ENABLE = no
+MOUSEKEY_ENABLE = no

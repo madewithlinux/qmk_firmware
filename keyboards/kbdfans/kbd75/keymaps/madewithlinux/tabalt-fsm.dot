@@ -1,0 +1,52 @@
+// tabalt-fsm.dot
+// dot -Tpng tabalt-fsm.dot > tabalt-fsm.png
+
+digraph finite_state_machine {
+    // rankdir=LR;
+    // rankdir=TB;
+    size="12,5";
+    dpi = 300;
+    // nodesep=0.8;
+    // layout=dot;
+    // layout=neato;
+    // layout=fdp;
+    mode=major;
+    overlap=false;
+    // splines=true;
+    // sep=2;
+    nodesep=0.5;
+
+    node [shape = box, style=rounded];
+
+    start         [shape=doublecircle];
+    alt_down      [label="alt_down"];
+    alttab_down   [];
+    post_alt      [];
+    waiting       [label="waiting"];
+    wait_reset    [];
+
+    // we don't need to do `register_code(KC_LALT);` here because it's already done by previous event handlers
+    start            -> alt_down     [label="alt press    ",weight=10];
+    alt_down         -> start        [label="alt release"];
+    alt_down         -> alttab_down  [label="tab press",weight=10];
+
+    alt_down -> post_alt   [label="alt release\ntimer = timer_read();"];
+    alttab_down -> post_alt   [label="alt release\ntimer = timer_read();"];
+    post_alt -> start      [label="tab release\ndo_tabalt()",weight=10];
+    post_alt -> wait_reset [label="timer expired"];
+    post_alt -> post_alt   [label="tab down"];
+
+    alttab_down      -> waiting      [label="tab release\ntimer = timer_read();",weight=10];
+
+    waiting          -> start        [label="alt release\ndo_tabalt();",weight=10];
+    waiting          -> wait_reset   [label="timer expired\ntap_code(KC_TAB);",weight=10];
+    waiting          -> wait_reset   [label="tab press\ntap_code(KC_TAB);\nregister_code(KC_TAB);",weight=10];
+
+    start            -> wait_reset   [label="tab press\nregister_code(KC_TAB);"];
+    waiting          -> wait_reset   [label="else"];
+    alt_down         -> wait_reset   [label="else"];
+    alttab_down      -> wait_reset   [label="else"];
+    wait_reset:s     -> start        [label="all keys released"];
+
+}
+
