@@ -4,6 +4,19 @@
 // We delay showing the popup so that fast Alt+Tab users aren't
 // disturbed by the popup briefly flashing.
 #define POPUP_DELAY_TIMEOUT 250
+#define TABALT_STEP_DELAY   10
+
+
+#ifdef CONSOLE_ENABLE
+#include "print.h"
+#define DEBUG
+#endif
+
+#ifdef DEBUG
+#define IF_DEBUG(x) x
+#else
+#define IF_DEBUG(x)
+#endif
 
 enum custom_keycodes {
     TABALT = SAFE_RANGE,
@@ -12,64 +25,6 @@ enum custom_keycodes {
 
 bool is_tabalt_active = false;
 uint16_t alt_tab_timer = 0;
-bool alt_tab_waiting = false;
-bool in_alt_tab_menu = false;
-/*
-Alt-Tab logic:
-
-do_tabalt() {
-    left alt down
-    tap right alt
-    tap tab
-    left alt up
-
-    alt_tab_waiting = false;
-    in_alt_tab_menu = false;
-}
-
-alt_tab_waiting && alt released => do_tabalt()
-
-
-alt_tab_waiting && alt_tab_timer expires => {
-    // at this point it becomes a regular alt-tab
-    tap tab
-    alt_tab_waiting = false;
-    in_alt_tab_menu = true;
-}
-
-
-tab:
-in_alt_tab_menu? {
-    yes => it's just a regular tab
-}
-pressed or released? {
-    pressed =>
-        alt_tab_waiting? {
-            yes =>
-                tap tab
-                register tab down
-                alt_tab_waiting = false;
-                in_alt_tab_menu = true;
-            no  =>
-                alt_tab_waiting = true;
-                alt_tab_timer = timer_read();
-        }
-    released =>
-        alt_tab_waiting? {
-            yes =>
-                do nothing, I guess?
-            no  =>
-                TODO: I think this is invalid state?
-        }
-}
-
-normal alt tab fallback logic:
-    alt_tab_waiting   => custom
-    in_alt_tab_menu   => normal
-    !is_tabalt_active => normal
-    alt isn't down    => normal
-
-*/
 
 const rgblight_segment_t PROGMEM _yes_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_GREEN} );
 const rgblight_segment_t PROGMEM _no_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_RED} );
@@ -99,79 +54,224 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
-inline void do_tabalt(void) {
+inline void do_tabalt_step_1(void) {
     register_code(KC_LALT);
     tap_code(KC_RALT);
+}
+inline void do_tabalt_step_2(void) {
     tap_code(KC_TAB);
     unregister_code(KC_LALT);
-
-    alt_tab_waiting = false;
-    in_alt_tab_menu = false;
 }
 
-void matrix_scan_user(void) {
-  if (alt_tab_waiting) {
-    if (timer_elapsed(alt_tab_timer) > POPUP_DELAY_TIMEOUT) {
-        // at this point it becomes a regular alt-tab
-        tap_code(KC_TAB);
-        alt_tab_waiting = false;
-        in_alt_tab_menu = true;
+
+typedef enum {
+    START,
+    ALT_DOWN,
+    ALTTAB_DOWN,
+    POST_ALT,
+    WAITING,
+    WAIT_RESET,
+    TABALT_STEP_1,
+    TABALT_STEP_2,
+    TABALT_STEP_3,
+} fsm_state_t;
+// see tabalt-fsm.dot for structure of fsm
+
+fsm_state_t fsm_state = START;
+
+#ifdef DEBUG
+const char* fsm_state_str(fsm_state_t fsm_state) {
+    switch (fsm_state) {
+        case START:
+            return "START";
+        case ALT_DOWN:
+            return "ALT_DOWN";
+        case ALTTAB_DOWN:
+            return "ALTTAB_DOWN";
+        case POST_ALT:
+            return "POST_ALT";
+        case WAITING:
+            return "WAITING";
+        case WAIT_RESET:
+            return "WAIT_RESET";
+        case TABALT_STEP_1:
+            return "TABALT_STEP_1";
+        case TABALT_STEP_2:
+            return "TABALT_STEP_2";
+        case TABALT_STEP_3:
+            return "TABALT_STEP_3";
+        default:
+            return "UNKNOWN";
     }
-  }
+}
+#endif
+
+
+void matrix_scan_user(void) {
+    switch (fsm_state) {
+        case WAIT_RESET: IF_DEBUG(print("case WAIT_RESET:\n");)
+            if (get_mods() == 0) {
+                fsm_state = START;
+                IF_DEBUG(print("wait complete, fsm_state = START\n");)
+            }
+            break;
+
+        case POST_ALT: IF_DEBUG(print("case POST_ALT:\n");)
+        case WAITING: IF_DEBUG(print("case WAITING:\n");)
+            if (timer_elapsed(alt_tab_timer) > POPUP_DELAY_TIMEOUT) {
+                // at this point it becomes a regular alt-tab
+                tap_code(KC_TAB);
+                fsm_state = WAIT_RESET;
+                alt_tab_timer = 0;
+            }
+            break;
+
+        case TABALT_STEP_1: IF_DEBUG(print("case TABALT_STEP_1:\n");)
+            alt_tab_timer = timer_read();
+            fsm_state = TABALT_STEP_2;
+            break;
+
+        case TABALT_STEP_2: IF_DEBUG(print("case TABALT_STEP_2:\n");)
+            if (timer_elapsed(alt_tab_timer) > TABALT_STEP_DELAY) {
+                do_tabalt_step_1();
+                alt_tab_timer = timer_read();
+                fsm_state = TABALT_STEP_3;
+            }
+            break;
+
+        case TABALT_STEP_3: IF_DEBUG(print("case TABALT_STEP_3:\n");)
+            if (timer_elapsed(alt_tab_timer) > TABALT_STEP_DELAY) {
+                do_tabalt_step_2();
+                fsm_state = START;
+                alt_tab_timer = 0;
+            }
+            break;
+
+        default:
+            break;
+    }
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-    case TOGTALT:
-        if (record->event.pressed) {
-            if (is_tabalt_active) {
-                backlight_disable();
-            }
-        } else {
-            if (is_tabalt_active) {
-                backlight_enable();
-            }
-            is_tabalt_active = !is_tabalt_active;
-        }
-        break;
 
-    case TABALT:
-        if (!alt_tab_waiting && (!is_tabalt_active || in_alt_tab_menu || (get_mods() != MOD_BIT(KC_LALT)))) {
-            // normal tab functionalty
+IF_DEBUG(
+    uprintf("KL: kc: 0x%04X, col: %u, row: %u, pressed: %b, time: %u, fsm_state: %s \n",
+        keycode, record->event.key.col, record->event.key.row, record->event.pressed, record->event.time,
+            fsm_state_str(fsm_state)
+    );
+)
+
+    switch (keycode) {
+        case TOGTALT:
+            if (record->event.pressed) {
+                if (is_tabalt_active) {
+                    backlight_disable();
+                }
+            } else {
+                if (is_tabalt_active) {
+                    backlight_enable();
+                }
+                is_tabalt_active = !is_tabalt_active;
+                fsm_state = START;
+                alt_tab_timer = 0;
+            }
+            return true;
+IF_DEBUG(
+        case KC_ENT:
+            print("\n\n\n\n\n\n");
+            return true;
+)
+    }
+
+    if (is_tabalt_active) {
+        switch (fsm_state) {
+            case START:
+                if (keycode == TABALT && record->event.pressed && (get_mods() == MOD_BIT(KC_LALT))) {
+                    fsm_state = ALTTAB_DOWN;
+                } else if (keycode == TABALT && record->event.pressed) {
+                    register_code(KC_TAB);
+                    fsm_state = WAIT_RESET;
+                } else if (keycode == TABALT && !record->event.pressed) {
+                    unregister_code(KC_TAB);
+                    fsm_state = WAIT_RESET;
+                } else if (keycode == KC_LALT && record->event.pressed) {
+                    fsm_state = ALT_DOWN;
+                } else {
+                    fsm_state = WAIT_RESET;
+                }
+                break;
+
+            case ALT_DOWN:
+                if (keycode == KC_LALT && !record->event.pressed) {
+                    alt_tab_timer = timer_read();
+                    fsm_state = POST_ALT;
+                } else if (keycode == TABALT && record->event.pressed) {
+                    fsm_state = ALTTAB_DOWN;
+                } else {
+                    fsm_state = WAIT_RESET;
+                }
+                break;
+
+            case POST_ALT:
+                if (keycode == TABALT && record->event.pressed) {
+                    fsm_state = POST_ALT;
+                } else if (keycode == TABALT && !record->event.pressed) {
+                    fsm_state = TABALT_STEP_1;
+                } else {
+                    // fsm_state = WAIT_RESET;
+                }
+                break;
+
+            case ALTTAB_DOWN:
+                if (keycode == KC_LALT && !record->event.pressed) {
+                    alt_tab_timer = timer_read();
+                    fsm_state = POST_ALT;
+                } else if (keycode == TABALT && !record->event.pressed) {
+                    alt_tab_timer = timer_read();
+                    fsm_state = WAITING;
+                } else {
+                    fsm_state = WAIT_RESET;
+                }
+                break;
+
+            case WAITING:
+                if (keycode == KC_LALT && !record->event.pressed) {
+                    fsm_state = TABALT_STEP_1;
+                } else if (keycode == TABALT && record->event.pressed) {
+                    tap_code(KC_TAB);
+                    register_code(KC_TAB);
+                    fsm_state = WAIT_RESET;
+                    alt_tab_timer = 0;
+                } else {
+                    fsm_state = WAIT_RESET;
+                    alt_tab_timer = 0;
+                }
+                break;
+
+            case WAIT_RESET:
+                // while waiting for reset, it's a regular tab key
+                if (keycode == TABALT) {
+                    if (record->event.pressed) {
+                        register_code(KC_TAB);
+                    } else {
+                        unregister_code(KC_TAB);
+                    }
+                }
+                break;
+
+            default:
+                break;
+        }
+        IF_DEBUG(uprintf("%s\n", fsm_state_str(fsm_state));)
+    } else {
+        // it's a normal tab button
+        if (keycode == TABALT) {
             if (record->event.pressed) {
                 register_code(KC_TAB);
             } else {
                 unregister_code(KC_TAB);
             }
-        } else {
-            // special tabalt functionality
-            if (record->event.pressed) {
-                if (alt_tab_waiting) {
-                    tap_code(KC_TAB);
-                    register_code(KC_TAB);
-                    alt_tab_waiting = false;
-                    in_alt_tab_menu = true;
-                } else {
-                    alt_tab_waiting = true;
-                    alt_tab_timer = timer_read();
-                }
-            } else {
-                // TODO: unknown what to do here (if anything)
-            }
         }
-        break;
-    case KC_LALT:
-        if (!record->event.pressed) { // on release
-            if (alt_tab_waiting) {
-                do_tabalt();
-            }
-            // just reset all the state
-            alt_tab_timer = 0;
-            alt_tab_waiting = false;
-            in_alt_tab_menu = false;
-        }
-        break;
-
     }
     return true;
 };
@@ -197,6 +297,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______,  _______,  _______,                      TOGTALT,  _______,  _______,                      MO(2)  ,  _______,  MO(2)  ,  _______,  _______,  _______
   ),
 
+#ifndef DEBUG
   [2] = LAYOUT(
     _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
 
@@ -217,4 +318,5 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,
     _______,  _______,  _______,                      _______,  _______,  _______,                      _______,  _______,  _______,  _______,  _______,  _______
   ),
+#endif // DEBUG
 };

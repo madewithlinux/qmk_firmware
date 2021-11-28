@@ -30,3 +30,22 @@ sudo udevadm trigger
 make kbdfans/kbd75:madewithlinux:dfu
 ```
 
+## tabalt special sauce
+see also: http://joools.xyz/wiki/winxp-style-alt-tab
+
+TODO: maybe some options in `docs/config_options.md` can help?
+
+misc links about graphviz
+* http://magjac.com/graphviz-visual-editor/
+* vscode extensions
+  * https://marketplace.visualstudio.com/items?itemName=tintinweb.graphviz-interactive-preview
+  * https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz
+  * https://marketplace.visualstudio.com/items?itemName=thankcreate.power-fsm-viewer
+  * https://github.com/thankcreate/power-fsm-viewer/wiki/Attributes
+* documentation
+  * https://graphviz.gitlab.io/doc/info/shapes.html
+  * https://graphviz.gitlab.io/doc/info/attrs.html
+* how to
+  * https://graphviz.org/Gallery/directed/fsm.html
+  * https://martin-thoma.com/how-to-draw-a-finite-state-machine/
+  * https://projectacrn.github.io/latest/developer-guides/graphviz.html
