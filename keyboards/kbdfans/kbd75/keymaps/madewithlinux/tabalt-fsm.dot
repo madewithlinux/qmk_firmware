@@ -30,15 +30,15 @@ digraph finite_state_machine {
     alt_down         -> start        [label="alt release"];
     alt_down         -> alttab_down  [label="tab press",weight=10];
 
-    alt_down -> post_alt   [label="alt release\ntimer = timer_read();"];
-    alttab_down -> post_alt   [label="alt release\ntimer = timer_read();"];
-    post_alt -> start      [label="tab release\ndo_tabalt()",weight=10];
-    post_alt -> wait_reset [label="timer expired"];
-    post_alt -> post_alt   [label="tab down"];
+    alt_down    -> post_alt   [label="alt release\ntimer = timer_read();\nprevent default"];
+    alttab_down -> post_alt   [label="alt release\ntimer = timer_read();\nprevent default"];
+    post_alt    -> start      [label="tab release\nprevent default\ndo_tabalt()",weight=10];
+    post_alt    -> wait_reset [label="timer expired\nunregister_code(KC_LALT);"];
+    post_alt    -> post_alt   [label="tab down"];
 
     alttab_down      -> waiting      [label="tab release\ntimer = timer_read();",weight=10];
 
-    waiting          -> start        [label="alt release\ndo_tabalt();",weight=10];
+    waiting          -> start        [label="alt release\nprevent default\ndo_tabalt();",weight=10];
     waiting          -> wait_reset   [label="timer expired\ntap_code(KC_TAB);",weight=10];
     waiting          -> wait_reset   [label="tab press\ntap_code(KC_TAB);\nregister_code(KC_TAB);",weight=10];
 
