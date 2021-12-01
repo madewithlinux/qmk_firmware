@@ -3,7 +3,7 @@
 
 // We delay showing the popup so that fast Alt+Tab users aren't
 // disturbed by the popup briefly flashing.
-#define POPUP_DELAY_TIMEOUT 250
+#define POPUP_DELAY_TIMEOUT 100
 #define TABALT_STEP_DELAY   10
 
 
@@ -23,22 +23,35 @@ enum custom_keycodes {
     TOGTALT,
 };
 
-bool is_tabalt_active = false;
 uint16_t alt_tab_timer = 0;
 
-const rgblight_segment_t PROGMEM _yes_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_GREEN} );
-const rgblight_segment_t PROGMEM _no_layer[] = RGBLIGHT_LAYER_SEGMENTS( {9, 6, HSV_RED} );
+typedef enum {
+    TABALT_OFF = 0,
+    TABALT_NORMAL = 1,
+    TABALT_RALT = 2,
+} tabalt_mode_t;
+
+tabalt_mode_t tabalt_mode = TABALT_OFF;
+#define is_tabalt_active (tabalt_mode != TABALT_OFF)
+
+const rgblight_segment_t PROGMEM _tabalt_off_layer[] = RGBLIGHT_LAYER_SEGMENTS({9, 6, HSV_RED});
+const rgblight_segment_t PROGMEM _tabalt_normal_layer[] = RGBLIGHT_LAYER_SEGMENTS({9, 6, HSV_BLUE});
+const rgblight_segment_t PROGMEM _tabalt_ralt_layer[]  = RGBLIGHT_LAYER_SEGMENTS({9, 6, HSV_GREEN});
 const rgblight_segment_t PROGMEM _tabalt_layer[] = RGBLIGHT_LAYER_SEGMENTS( {0, 2, HSV_WHITE} );
 
-const rgblight_segment_t* const PROGMEM _rgb_layers[] =
-    RGBLIGHT_LAYERS_LIST( _yes_layer, _no_layer, _tabalt_layer );
+const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST(
+    _tabalt_off_layer,
+    _tabalt_normal_layer,
+    _tabalt_ralt_layer,
+    _tabalt_layer
+);
 
 void keyboard_post_init_user(void) {
     rgblight_layers = _rgb_layers;
 }
 
 bool led_update_user(led_t led_state) {
-    rgblight_set_layer_state(2, is_tabalt_active);
+    rgblight_set_layer_state(3, is_tabalt_active);
     return true;
 }
 
@@ -46,14 +59,21 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case TOGTALT:
             if (!record->event.pressed) {
-                rgblight_blink_layer(is_tabalt_active ? 0 : 1, 500);
-                // make sure the other layer is off
-                rgblight_set_layer_state(is_tabalt_active ? 1 : 0, 0);
+                // just set the state by the enum
+                rgblight_set_layer_state(TABALT_OFF, 0);
+                rgblight_set_layer_state(TABALT_NORMAL, 0);
+                rgblight_set_layer_state(TABALT_RALT, 0);
+                rgblight_blink_layer(tabalt_mode, 500);
             }
             break;
     }
 }
 
+inline void do_normal_tabalt(void) {
+    register_code(KC_LALT);
+    tap_code(KC_TAB);
+    unregister_code(KC_LALT);
+}
 inline void do_tabalt_step_1(void) {
     register_code(KC_LALT);
     tap_code(KC_RALT);
@@ -117,6 +137,13 @@ void matrix_scan_user(void) {
             break;
 
         case POST_ALT: IF_DEBUG(print("case POST_ALT:\n");)
+            if (timer_elapsed(alt_tab_timer) > POPUP_DELAY_TIMEOUT) {
+                unregister_code(KC_LALT);
+                fsm_state = WAIT_RESET;
+                alt_tab_timer = 0;
+            }
+            break;
+
         case WAITING: IF_DEBUG(print("case WAITING:\n");)
             if (timer_elapsed(alt_tab_timer) > POPUP_DELAY_TIMEOUT) {
                 // at this point it becomes a regular alt-tab
@@ -127,19 +154,18 @@ void matrix_scan_user(void) {
             break;
 
         case TABALT_STEP_1: IF_DEBUG(print("case TABALT_STEP_1:\n");)
-            alt_tab_timer = timer_read();
-            fsm_state = TABALT_STEP_2;
-            break;
-
-        case TABALT_STEP_2: IF_DEBUG(print("case TABALT_STEP_2:\n");)
-            if (timer_elapsed(alt_tab_timer) > TABALT_STEP_DELAY) {
+            if (tabalt_mode == TABALT_RALT) {
                 do_tabalt_step_1();
                 alt_tab_timer = timer_read();
-                fsm_state = TABALT_STEP_3;
+                fsm_state = TABALT_STEP_2;
+            } else {
+                do_normal_tabalt();
+                fsm_state = START;
+                alt_tab_timer = 0;
             }
             break;
 
-        case TABALT_STEP_3: IF_DEBUG(print("case TABALT_STEP_3:\n");)
+        case TABALT_STEP_2: IF_DEBUG(print("case TABALT_STEP_2:\n");)
             if (timer_elapsed(alt_tab_timer) > TABALT_STEP_DELAY) {
                 do_tabalt_step_2();
                 fsm_state = START;
@@ -171,7 +197,12 @@ IF_DEBUG(
                 if (is_tabalt_active) {
                     backlight_enable();
                 }
-                is_tabalt_active = !is_tabalt_active;
+                // advance to next mode
+                switch (tabalt_mode) {
+                    case TABALT_OFF:    tabalt_mode = TABALT_NORMAL; break;
+                    case TABALT_NORMAL: tabalt_mode = TABALT_RALT;   break;
+                    case TABALT_RALT:   tabalt_mode = TABALT_OFF;    break;
+                }
                 fsm_state = START;
                 alt_tab_timer = 0;
             }
@@ -205,6 +236,8 @@ IF_DEBUG(
                 if (keycode == KC_LALT && !record->event.pressed) {
                     alt_tab_timer = timer_read();
                     fsm_state = POST_ALT;
+                    // don't send an alt up keycode yet
+                    return false;
                 } else if (keycode == TABALT && record->event.pressed) {
                     fsm_state = ALTTAB_DOWN;
                 } else {
@@ -217,6 +250,8 @@ IF_DEBUG(
                     fsm_state = POST_ALT;
                 } else if (keycode == TABALT && !record->event.pressed) {
                     fsm_state = TABALT_STEP_1;
+                    // don't send an alt up keycode yet
+                    return false;
                 } else {
                     // fsm_state = WAIT_RESET;
                 }
@@ -226,6 +261,8 @@ IF_DEBUG(
                 if (keycode == KC_LALT && !record->event.pressed) {
                     alt_tab_timer = timer_read();
                     fsm_state = POST_ALT;
+                    // don't send an alt up keycode yet
+                    return false;
                 } else if (keycode == TABALT && !record->event.pressed) {
                     alt_tab_timer = timer_read();
                     fsm_state = WAITING;
@@ -237,6 +274,8 @@ IF_DEBUG(
             case WAITING:
                 if (keycode == KC_LALT && !record->event.pressed) {
                     fsm_state = TABALT_STEP_1;
+                    // don't send an alt up keycode yet
+                    return false;
                 } else if (keycode == TABALT && record->event.pressed) {
                     tap_code(KC_TAB);
                     register_code(KC_TAB);
