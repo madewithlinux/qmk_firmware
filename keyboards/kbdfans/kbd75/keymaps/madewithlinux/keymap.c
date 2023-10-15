@@ -7,6 +7,12 @@
 #define TABALT_STEP_DELAY   10
 
 
+#define KC_LCTRL KC_LEFT_CTRL
+#define RESET QK_MAKE
+#define VLK_TOG VK_TOGG
+#define BL_DEC QK_BACKLIGHT_DOWN
+#define BL_INC QK_BACKLIGHT_UP
+
 #ifdef CONSOLE_ENABLE
 #include "print.h"
 #define DEBUG
