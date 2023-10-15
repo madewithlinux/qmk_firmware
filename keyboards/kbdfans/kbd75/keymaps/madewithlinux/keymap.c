@@ -8,7 +8,6 @@
 
 
 #define KC_LCTRL KC_LEFT_CTRL
-#define RESET QK_MAKE
 #define VLK_TOG VK_TOGG
 #define BL_DEC QK_BACKLIGHT_DOWN
 #define BL_INC QK_BACKLIGHT_UP
@@ -37,8 +36,16 @@ typedef enum {
     TABALT_RALT = 2,
 } tabalt_mode_t;
 
-tabalt_mode_t tabalt_mode = TABALT_OFF;
-#define is_tabalt_active (tabalt_mode != TABALT_OFF)
+typedef union {
+  uint32_t raw;
+  struct {
+    tabalt_mode_t tabalt_mode;
+  };
+} user_config_t;
+
+user_config_t user_config;
+
+#define is_tabalt_active (user_config.tabalt_mode != TABALT_OFF)
 
 const rgblight_segment_t PROGMEM _tabalt_off_layer[] = RGBLIGHT_LAYER_SEGMENTS({9, 6, HSV_RED});
 const rgblight_segment_t PROGMEM _tabalt_normal_layer[] = RGBLIGHT_LAYER_SEGMENTS({9, 6, HSV_BLUE});
@@ -53,6 +60,9 @@ const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST(
 );
 
 void keyboard_post_init_user(void) {
+    // Read the user config from EEPROM
+    user_config.raw = eeconfig_read_user();
+
     rgblight_layers = _rgb_layers;
 }
 
@@ -69,7 +79,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
                 rgblight_set_layer_state(TABALT_OFF, 0);
                 rgblight_set_layer_state(TABALT_NORMAL, 0);
                 rgblight_set_layer_state(TABALT_RALT, 0);
-                rgblight_blink_layer(tabalt_mode, 500);
+                rgblight_blink_layer(user_config.tabalt_mode, 500);
             }
             break;
     }
@@ -160,7 +170,7 @@ void matrix_scan_user(void) {
             break;
 
         case TABALT_STEP_1: IF_DEBUG(print("case TABALT_STEP_1:\n");)
-            if (tabalt_mode == TABALT_RALT) {
+            if (user_config.tabalt_mode == TABALT_RALT) {
                 do_tabalt_step_1();
                 alt_tab_timer = timer_read();
                 fsm_state = TABALT_STEP_2;
@@ -204,11 +214,12 @@ IF_DEBUG(
                     backlight_enable();
                 }
                 // advance to next mode
-                switch (tabalt_mode) {
-                    case TABALT_OFF:    tabalt_mode = TABALT_NORMAL; break;
-                    case TABALT_NORMAL: tabalt_mode = TABALT_RALT;   break;
-                    case TABALT_RALT:   tabalt_mode = TABALT_OFF;    break;
+                switch (user_config.tabalt_mode) {
+                    case TABALT_OFF:    user_config.tabalt_mode = TABALT_NORMAL; break;
+                    case TABALT_NORMAL: user_config.tabalt_mode = TABALT_RALT;   break;
+                    case TABALT_RALT:   user_config.tabalt_mode = TABALT_OFF;    break;
                 }
+                eeconfig_update_user(user_config.raw);
                 fsm_state = START;
                 alt_tab_timer = 0;
             }
@@ -335,7 +346,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   [1] = LAYOUT(
     _______,  _______,  _______,  _______,  _______,  KC_MPRV,  KC_MNXT,  KC_MPLY,  KC_MSTP,  KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,  KC_PSCR,  _______,  _______,
-    _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RESET  ,  _______,
+    _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  QK_BOOT  ,  _______,
     _______,  RGB_TOG,  RGB_MOD,  RGB_HUI,  RGB_HUD,  RGB_SAI,  RGB_SAD,  RGB_VAI,  RGB_VAD,  RGB_SPI,  RGB_SPD,  _______,  _______,  _______,            _______,
     _______,  VLK_TOG, RGB_RMOD,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                      _______,  _______,
     _______,  _______,  _______,  _______,  BL_DEC,   BL_TOGG,  BL_INC ,   BL_STEP, _______,  _______,  _______,  _______,  KC_APP ,            _______,  _______,
