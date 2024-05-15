@@ -214,28 +214,14 @@ void render_layer_state_to_oled(void) {
     // oled_clear();
     switch (current_layer) {
         case _P1:
-            // Font Name: Colossal
-            // oled_write("8888888b.   d888  \n", false);
-            // oled_write("888   Y88b d8888  \n", false);
-            // oled_write("888    888   888  \n", false);
-            // oled_write("888   d88P   888  \n", false);
-            // oled_write("8888888P\"    888  \n", false);
-            // oled_write("888          888  \n", false);
-            // oled_write("888          888  \n", false);
-            // oled_write("888        8888888", false);
-
             // Font Name: 4Max
             // each line here is exactly 21 characters wide
             oled_write(
                 //
-                "88\"\"Yb   .d          "
-                "88__dP .d88      menu"
-                "88\"\"\"    88   buttons"
-                "88       88          "
-                // "88\"\"Yb   .d          "
-                //        "88__dP .d88          "
-                //        "88\"\"\"    88          "
-                //        "88       88          "
+                "88\"\"Yb   .d"  "   menu   "
+                "88__dP .d88"    "   buttons"
+                "88\"\"\"    88" "          "
+                "88       88"    "          "
                 /*-----<>-----<>-----*/
                 "Menu     Close  Game "
                 /*-----<>-----<>-----*/
@@ -248,25 +234,14 @@ void render_layer_state_to_oled(void) {
             break;
 
         case _P2:
-            // // each line here is exactly 21 characters wide
-            // oled_write("8888888b.   .d8888b. ", false);
-            // oled_write("888   Y88b d88P  Y88b", false);
-            // oled_write("888    888        888", false);
-            // oled_write("888   d88P      .d88P", false);
-            // oled_write("8888888P\"   .od888P\" ", false);
-            // oled_write("888        d88P\"     ", false);
-            // oled_write("888        888\"      ", false);
-            // oled_write("888        888888888", false);
+            // Font Name: 4Max
+            // each line here is exactly 21 characters wide
             oled_write(
                 //
-                "88\"\"Yb oP\"Yb.        "
-                "88__dP \"' dP'    menu"
-                "88\"\"\"    dP'  buttons"
-                "88     .d8888        "
-                // "88\"\"Yb oP\"Yb.        "
-                // "88__dP \"' dP'        "
-                // "88\"\"\"    dP'         "
-                // "88     .d8888        "
+                "88\"\"Yb oP\"Yb." " menu   "
+                "88__dP \"' dP'"   " buttons"
+                "88\"\"\"    dP' " "        "
+                "88     .d8888"    "        "
                 /*-----<>-----<>-----*/
                 "Menu     Close  Game "
                 /*-----<>-----<>-----*/
@@ -282,10 +257,10 @@ void render_layer_state_to_oled(void) {
             // Font Name: 4Max
             oled_write(
                 //
-                "88\"\"Yb   .d          "
-                "88__dP .d88      game"
-                "88\"\"\"    88   buttons"
-                "88       88          "
+                "88\"\"Yb   .d"  "      game"
+                "88__dP .d88"    "   buttons"
+                "88\"\"\"    88" "          "
+                "88       88"    "          "
                 /*-----<>-----<>-----*/
                 "Menu     Close       "
                 /*-----<>-----<>-----*/
@@ -300,10 +275,10 @@ void render_layer_state_to_oled(void) {
         case _P2_GAME:
             oled_write(
                 //
-                "88\"\"Yb oP\"Yb.        "
-                "88__dP \"' dP'    game"
-                "88\"\"\"    dP'  buttons"
-                "88     .d8888        "
+                "88\"\"Yb oP\"Yb." "    game"
+                "88__dP \"' dP'"   " buttons"
+                "88\"\"\"    dP' " "        "
+                "88     .d8888"    "        "
                 /*-----<>-----<>-----*/
                 "Menu     Close       "
                 /*-----<>-----<>-----*/
