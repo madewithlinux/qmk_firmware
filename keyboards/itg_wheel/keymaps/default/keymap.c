@@ -134,9 +134,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     [_FN] = LAYOUT_ortho_4x3(
         QK_BOOT   ,  EE_CLR   ,  QK_RBT,
-        DF(_TEST) ,  A(KC_F4) ,  _______,
+        _______   ,  A(KC_F4) ,  _______,
         OPERATOR  ,  _______  ,  COIN,
-        _______   ,  _______  ,  _______
+        _______   ,  _______  ,  DF(_TEST)
     ),
     [_TEST] = LAYOUT_ortho_4x3(
         KC_1,   KC_2,   KC_3,
@@ -296,9 +296,9 @@ void render_layer_state_to_oled(void) {
             oled_write("                     ", false);
             oled_write("                     ", false);
             oled_write("flash   wipe   reboot", false);
-            oled_write("TEST    exit       Fn", false);
+            oled_write("____    exit       Fn", false);
             oled_write("op      ____     coin", false);
-            oled_write("____    ____     ____", false);
+            oled_write("____    ____     TEST", false);
 
             // oled_write("oled_max_chars: ", false);
             // snprintf(buf, buf_size, "%d", oled_max_chars());
