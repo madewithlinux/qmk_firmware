@@ -4,6 +4,42 @@
 // #include "i2c_master.h"
 #include QMK_KEYBOARD_H
 #include "oled/oled_driver.h"
+#include "nec_transmit.h"
+
+
+#define IR_PIN GP0
+
+static const PIO pio = pio1;
+int tx_sm = 0;
+
+uint8_t reverse(uint8_t b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
+void send_ir_code_address_data(uint8_t address, uint8_t data) {
+    uint32_t tx_frame = nec_encode_frame(reverse(address), reverse(data));
+    pio_sm_put(pio, tx_sm, tx_frame);
+}
+
+// for some reason, samsung TV sends the same address twice (no bitwise inverse)
+void send_ir_code_address_data_samsung(uint8_t address, uint8_t data) {
+    address = reverse(address);
+    data = reverse(data);
+    uint32_t tx_frame = address | address << 8 | data << 16 | (data ^ 0xff) << 24;
+    pio_sm_put(pio, tx_sm, tx_frame);
+}
+
+
+void keyboard_post_init_user() {
+    uint pio_idx = pio_get_index(pio);
+    /* Get PIOx peripheral out of reset state. */
+    hal_lld_peripheral_unreset(pio_idx == 0 ? RESETS_ALLREG_PIO0 : RESETS_ALLREG_PIO1);
+
+    tx_sm = nec_tx_init(pio, IR_PIN);
+}
 
 enum layer_names {
     // _BASE,
@@ -88,6 +124,21 @@ enum custom_keycodes {
     P1_CLOSE,
     P2_OPEN_MENU,
     P2_CLOSE,
+    IR_SOUNDBAR_POWER_ON_OFF,
+    IR_SOUNDBAR_VOL_UP,
+    IR_SOUNDBAR_VOL_DOWN,
+    IR_SOUNDBAR_TOGGLE_MUTE,
+    IR_TV_POWER_ON_OFF,
+    IR_TV_SOURCE,
+    IR_TV_LEFT,
+    IR_TV_RIGHT,
+    IR_TV_UP,
+    IR_TV_DOWN,
+    IR_TV_SELECT,
+    IR_TV_EXIT,
+    IR_TV_HDMI1,
+    IR_TV_HDMI2,
+    IR_TV_HDMI3,
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -133,10 +184,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         P2_LEFT     , P2_DOWN     , P2_RIGHT
     ),
     [_FN] = LAYOUT_ortho_4x3(
-        QK_BOOT   ,  EE_CLR   ,  QK_RBT,
-        _______   ,  A(KC_F4) ,  _______,
-        OPERATOR  ,  _______  ,  COIN,
-        _______   ,  _______  ,  DF(_TEST)
+        QK_BOOT                  ,  OPERATOR              ,  _______,
+        IR_TV_HDMI3              ,  A(KC_F4)              ,  _______,
+        IR_SOUNDBAR_TOGGLE_MUTE  ,  IR_SOUNDBAR_VOL_UP    ,  IR_TV_POWER_ON_OFF,
+        _______                  ,  IR_SOUNDBAR_VOL_DOWN  ,  IR_SOUNDBAR_POWER_ON_OFF
     ),
     [_TEST] = LAYOUT_ortho_4x3(
         KC_1,   KC_2,   KC_3,
@@ -159,6 +210,82 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   switch (keycode) {
+    case IR_SOUNDBAR_POWER_ON_OFF:
+        if (record->event.pressed) {
+            send_ir_code_address_data(0U, 2U);
+        }
+        return false;
+    case IR_SOUNDBAR_VOL_UP:
+        if (record->event.pressed) {
+            send_ir_code_address_data(0U, 130U);
+        }
+        return false;
+    case IR_SOUNDBAR_VOL_DOWN:
+        if (record->event.pressed) {
+            send_ir_code_address_data(0U, 162U);
+        }
+        return false;
+    case IR_SOUNDBAR_TOGGLE_MUTE:
+        if (record->event.pressed) {
+            send_ir_code_address_data(0U, 18U);
+        }
+        return false;
+    case IR_TV_POWER_ON_OFF:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 64U);
+        }
+        return false;
+    case IR_TV_SOURCE:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 128U);
+        }
+        return false;
+    case IR_TV_LEFT:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 166U);
+        }
+        return false;
+    case IR_TV_RIGHT:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 70U);
+        }
+        return false;
+    case IR_TV_UP:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 6U);
+        }
+        return false;
+    case IR_TV_DOWN:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 134U);
+        }
+        return false;
+    case IR_TV_SELECT:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 22U);
+        }
+        return false;
+    case IR_TV_EXIT:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 180U);
+        }
+        return false;
+    case IR_TV_HDMI1:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 151U);
+        }
+        return false;
+    case IR_TV_HDMI2:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 125U);
+        }
+        return false;
+    case IR_TV_HDMI3:
+        if (record->event.pressed) {
+            send_ir_code_address_data_samsung(224U, 67U);
+        }
+        return false;
+
     case P1_OPEN_MENU:
       if (record->event.pressed) {
         register_code(P1_MENU_LEFT);
@@ -295,10 +422,16 @@ void render_layer_state_to_oled(void) {
             oled_write("                     ", false);
             oled_write("                     ", false);
             oled_write("                     ", false);
-            oled_write("flash   wipe   reboot", false);
-            oled_write("____    exit       Fn", false);
-            oled_write("op      ____     coin", false);
-            oled_write("____    ____     TEST", false);
+            oled_write("flash   op       ____", false);
+            oled_write("HDMI3   exit       Fn", false);
+            oled_write("mute    vol+       TV", false);
+            oled_write("____    vol-    sound", false);
+
+            // char buf[10];
+            // oled_write("tx_sm: ", false);
+            // snprintf(buf, 10, "%d", tx_sm);
+            // oled_write(buf, false);
+            // oled_write("\n", false);
 
             // oled_write("oled_max_chars: ", false);
             // snprintf(buf, buf_size, "%d", oled_max_chars());
