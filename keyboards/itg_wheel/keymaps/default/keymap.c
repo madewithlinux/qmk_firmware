@@ -160,34 +160,34 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //     P1_MENU_LEFT, P1_MENU_DOWN, P1_MENU_RIGHT
     // ),
     [_P1] = LAYOUT_ortho_4x3(
-        P1_OPEN_MENU, P1_CLOSE    , MO(_P1_GAME),
-        DF(_P2)     , P1_BACK     , MO(_FN),
         P1_SELECT   , P1_MENU_UP  , P1_START,
-        P1_MENU_LEFT, P1_MENU_DOWN, P1_MENU_RIGHT
+        P1_MENU_LEFT, P1_MENU_DOWN, P1_MENU_RIGHT,
+        P1_OPEN_MENU, P1_CLOSE    , DF(_P2),
+        P1_BACK     , MO(_P1_GAME), MO(_FN)
     ),
     [_P2] = LAYOUT_ortho_4x3(
-        P2_OPEN_MENU, P2_CLOSE    , MO(_P2_GAME),
-        DF(_P1)     , P2_BACK     , _______,
         P2_SELECT   , P2_MENU_UP  , P2_START,
-        P2_MENU_LEFT, P2_MENU_DOWN, P2_MENU_RIGHT
+        P2_MENU_LEFT, P2_MENU_DOWN, P2_MENU_RIGHT,
+        P2_OPEN_MENU, P2_CLOSE    , DF(_P1),
+        P2_BACK     , MO(_P2_GAME), MO(_FN)
     ),
     [_P1_GAME] = LAYOUT_ortho_4x3(
-        P1_OPEN_MENU, P1_CLOSE    , _______,
-        _______     , P1_BACK     , _______,
         P1_SELECT   , P1_UP       , P1_START,
-        P1_LEFT     , P1_DOWN     , P1_RIGHT
+        P1_LEFT     , P1_DOWN     , P1_RIGHT,
+        P1_OPEN_MENU, P1_CLOSE    , XXXXXXX,
+        P1_BACK     , _______     , XXXXXXX
     ),
     [_P2_GAME] = LAYOUT_ortho_4x3(
-        P2_OPEN_MENU, P2_CLOSE    , _______,
-        _______     , P2_BACK     , _______,
         P2_SELECT   , P2_UP       , P2_START,
-        P2_LEFT     , P2_DOWN     , P2_RIGHT
+        P2_LEFT     , P2_DOWN     , P2_RIGHT,
+        P2_OPEN_MENU, P2_CLOSE    , XXXXXXX,
+        P2_BACK     , _______     , XXXXXXX
     ),
     [_FN] = LAYOUT_ortho_4x3(
-        QK_BOOT                  ,  OPERATOR              ,  _______,
-        IR_TV_HDMI3              ,  A(KC_F4)              ,  _______,
-        IR_SOUNDBAR_TOGGLE_MUTE  ,  IR_SOUNDBAR_VOL_UP    ,  IR_TV_POWER_ON_OFF,
-        _______                  ,  IR_SOUNDBAR_VOL_DOWN  ,  IR_SOUNDBAR_POWER_ON_OFF
+        IR_SOUNDBAR_TOGGLE_MUTE , IR_SOUNDBAR_VOL_UP   , IR_TV_POWER_ON_OFF,
+        _______                 , IR_SOUNDBAR_VOL_DOWN , IR_SOUNDBAR_POWER_ON_OFF,
+        QK_BOOT                 , OPERATOR             , IR_TV_HDMI3,
+        A(KC_F4)                , _______              , _______
     ),
     [_TEST] = LAYOUT_ortho_4x3(
         KC_1,   KC_2,   KC_3,
@@ -203,7 +203,7 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [_P2] = { ENCODER_CCW_CW(P2_MENU_LEFT, P2_MENU_RIGHT) },
     [_P1_GAME] = { ENCODER_CCW_CW(P1_LEFT, P1_RIGHT) },
     [_P2_GAME] = { ENCODER_CCW_CW(P2_LEFT, P2_RIGHT) },
-    [_FN] = { ENCODER_CCW_CW(P1_MENU_LEFT, P1_MENU_RIGHT) },
+    [_FN] = { ENCODER_CCW_CW(IR_SOUNDBAR_VOL_DOWN, IR_SOUNDBAR_VOL_UP) },
     [_TEST] = { ENCODER_CCW_CW(P1_MENU_LEFT, P1_MENU_RIGHT) },
 };
 #endif
@@ -329,6 +329,27 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 // #ifdef OLED_ENABLE
 
+#define MAIN_6_BUTTONS \
+                /*-----<>-----<>-----*/ \
+                "Select  Up      Start" \
+                /*-----<>-----<>-----*/ \
+                "Left    Down    Right"
+#define ALL_MENU_BUTTONS \
+                MAIN_6_BUTTONS \
+                /*-----<>-----<>-----*/ \
+                "Menu    Close  P1<>P2" \
+                /*-----<>-----<>-----*/ \
+                "Back    Game         "
+#define ALL_GAME_BUTTONS \
+                MAIN_6_BUTTONS \
+                /*-----<>-----<>-----*/ \
+                "Menu    Close  P1<>P2" \
+                /*-----<>-----<>-----*/ \
+                "Back                 "
+
+
+
+
 void render_layer_state_to_oled(void) {
     static uint16_t prev_layer = _TEST+1;
     uint16_t current_layer = get_highest_layer(layer_state | default_layer_state);
@@ -349,14 +370,7 @@ void render_layer_state_to_oled(void) {
                 "88__dP .d88"    "   buttons"
                 "88\"\"\"    88" "          "
                 "88       88"    "          "
-                /*-----<>-----<>-----*/
-                "Menu     Close  Game "
-                /*-----<>-----<>-----*/
-                "P1<>P2   Back        "
-                /*-----<>-----<>-----*/
-                "Select   Up     Start"
-                /*-----<>-----<>-----*/
-                "Left     Down   Right",
+                ALL_MENU_BUTTONS,
                 false);
             break;
 
@@ -369,14 +383,7 @@ void render_layer_state_to_oled(void) {
                 "88__dP \"' dP'"   " buttons"
                 "88\"\"\"    dP' " "        "
                 "88     .d8888"    "        "
-                /*-----<>-----<>-----*/
-                "Menu     Close  Game "
-                /*-----<>-----<>-----*/
-                "P1<>P2   Back        "
-                /*-----<>-----<>-----*/
-                "Select   Up     Start"
-                /*-----<>-----<>-----*/
-                "Left     Down   Right",
+                ALL_MENU_BUTTONS,
                 false);
             break;
 
@@ -388,14 +395,7 @@ void render_layer_state_to_oled(void) {
                 "88__dP .d88"    "   buttons"
                 "88\"\"\"    88" "          "
                 "88       88"    "          "
-                /*-----<>-----<>-----*/
-                "Menu     Close       "
-                /*-----<>-----<>-----*/
-                "P1<>P2   Back        "
-                /*-----<>-----<>-----*/
-                "Select   Up     Start"
-                /*-----<>-----<>-----*/
-                "Left     Down   Right",
+                ALL_GAME_BUTTONS,
                 false);
             break;
 
@@ -406,26 +406,25 @@ void render_layer_state_to_oled(void) {
                 "88__dP \"' dP'"   " buttons"
                 "88\"\"\"    dP' " "        "
                 "88     .d8888"    "        "
-                /*-----<>-----<>-----*/
-                "Menu     Close       "
-                /*-----<>-----<>-----*/
-                "P1<>P2   Back        "
-                /*-----<>-----<>-----*/
-                "Select   Up     Start"
-                /*-----<>-----<>-----*/
-                "Left     Down   Right",
+                ALL_GAME_BUTTONS,
                 false);
             break;
 
         case _FN:
             oled_write("_FN\n", false);
-            oled_write("                     ", false);
-            oled_write("                     ", false);
-            oled_write("                     ", false);
-            oled_write("flash   op       ____", false);
-            oled_write("HDMI3   exit       Fn", false);
-            oled_write("mute    vol+       TV", false);
-            oled_write("____    vol-    sound", false);
+            oled_write("\n", false);
+            oled_write("\n", false);
+            oled_write("\n", false);
+            oled_write(
+                /*-----<>-----<>-----*/
+                "mute    vol+    TV   "
+                /*-----<>-----<>-----*/
+                "____    vol-    sound"
+                /*-----<>-----<>-----*/
+                "flash   op      HDMI3"
+                /*-----<>-----<>-----*/
+                "exit    ____    Fn   "
+                , false);
 
             // char buf[10];
             // oled_write("tx_sm: ", false);
