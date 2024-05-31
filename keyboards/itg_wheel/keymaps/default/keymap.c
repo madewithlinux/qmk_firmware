@@ -117,6 +117,8 @@ enum layer_names {
 //
 #define COIN          KC_F1
 #define OPERATOR      KC_SCROLL_LOCK
+// requires KeyboardMouseShortcuts.lua module
+#define PROFILE       KC_P
 
 
 enum custom_keycodes {
@@ -187,7 +189,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         IR_SOUNDBAR_TOGGLE_MUTE , IR_SOUNDBAR_VOL_UP   , IR_TV_POWER_ON_OFF,
         _______                 , IR_SOUNDBAR_VOL_DOWN , IR_SOUNDBAR_POWER_ON_OFF,
         QK_BOOT                 , OPERATOR             , IR_TV_HDMI3,
-        A(KC_F4)                , _______              , _______
+        A(KC_F4)                , PROFILE              , _______
     ),
     [_TEST] = LAYOUT_ortho_4x3(
         KC_1,   KC_2,   KC_3,
@@ -417,13 +419,13 @@ void render_layer_state_to_oled(void) {
             oled_write("\n", false);
             oled_write(
                 /*-----<>-----<>-----*/
-                "mute    vol+    TV   "
+                "mute   vol+     TV   "
                 /*-----<>-----<>-----*/
-                "____    vol-    sound"
+                "____   vol-     sound"
                 /*-----<>-----<>-----*/
-                "flash   op      HDMI3"
+                "flash  op       HDMI3"
                 /*-----<>-----<>-----*/
-                "exit    ____    Fn   "
+                "exit   profile  Fn   "
                 , false);
 
             // char buf[10];
