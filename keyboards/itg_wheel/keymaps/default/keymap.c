@@ -91,6 +91,8 @@ enum layer_names {
 // #define P2_UPRIGHT    KC_KP_9
 
 // my mappings. note: these are intentionally swapped for P1!
+#define CUSTOM_P1_MAPPINGS
+#ifdef CUSTOM_P1_MAPPINGS
 #define P1_MENU_LEFT  KC_LEFT
 #define P1_MENU_RIGHT KC_RIGHT
 #define P1_MENU_UP    KC_UP
@@ -99,6 +101,16 @@ enum layer_names {
 #define P1_RIGHT      KC_PGDN
 #define P1_UP         KC_HOME
 #define P1_DOWN       KC_END
+#else
+#define P1_MENU_LEFT  KC_DEL
+#define P1_MENU_RIGHT KC_PGDN
+#define P1_MENU_UP    KC_HOME
+#define P1_MENU_DOWN  KC_END
+#define P1_LEFT       KC_LEFT
+#define P1_RIGHT      KC_RIGHT
+#define P1_UP         KC_UP
+#define P1_DOWN       KC_DOWN
+#endif
 #define P1_START      KC_ENTER
 #define P1_SELECT     KC_SLASH
 #define P1_BACK       KC_ESC
