@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include "send_string_keycodes.h"
 #include QMK_KEYBOARD_H
+// #include "rgb_matrix.h"
 
 #ifdef AUDIO_ENABLE
 #    include "muse.h"
@@ -180,10 +181,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 ),
 
 [_ITG_MENU] = LAYOUT_planck_grid(
-    XXXXXXX, XXXXXXX, KC_UP  , XXXXXXX, KC_SLSH, XXXXXXX, XXXXXXX, KC_Q   , XXXXXXX, KC_W   , XXXXXXX, XXXXXXX,
-    XXXXXXX, KC_LEFT, XXXXXXX, KC_RGHT, KC_ENT , P1_MENU, P2_MENU, KC_E   , KC_A   , XXXXXXX, KC_D   , XXXXXXX,
-    KC_F4  , XXXXXXX, KC_DOWN, XXXXXXX, KC_ESC , P1_CLOS, P2_CLOS, KC_BSLS, XXXXXXX, KC_S   , XXXXXXX, KC_F9  ,
-    QWERTY , KC_F6  , KC_LALT, XXXXXXX, LOWER  , XXXXXXX, XXXXXXX, RAISE  , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
+    // XXXXXXX, XXXXXXX, KC_UP  , XXXXXXX, KC_SLSH, XXXXXXX, XXXXXXX, KC_Q   , XXXXXXX, KC_W   , XXXXXXX, XXXXXXX,
+    // XXXXXXX, KC_LEFT, XXXXXXX, KC_RGHT, KC_ENT , P1_MENU, P2_MENU, KC_E   , KC_A   , XXXXXXX, KC_D   , XXXXXXX,
+    // KC_F4  , XXXXXXX, KC_DOWN, XXXXXXX, KC_ESC , P1_CLOS, P2_CLOS, KC_BSLS, XXXXXXX, KC_S   , XXXXXXX, KC_F9  ,
+    // QWERTY , KC_F6  , KC_LALT, XXXXXXX, LOWER  , XXXXXXX, XXXXXXX, RAISE  , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
+    XXXXXXX, XXXXXXX, KC_RGHT, XXXXXXX, XXXXXXX, KC_SLSH, XXXXXXX, QWERTY , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, KC_UP  , XXXXXXX, KC_DOWN, XXXXXXX, KC_ENT , P1_MENU, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, KC_LEFT, XXXXXXX, XXXXXXX, KC_ESC , P1_CLOS, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
 )
 
 };
@@ -439,9 +444,13 @@ uint8_t itg_layer_colormap[][3] = {
     /*8*/ {RGB_YELLOW},
 };
 uint8_t itg_layer_colors[RGB_MATRIX_LED_COUNT] = {
-    0, 0, 1, 0, 3, 0,    0, 3, 0, 1, 0, 0,
-    0, 1, 0, 1, 2, 7,    7, 2, 1, 0, 1, 0,
-    0, 0, 1, 0, 4, 8,    8, 4, 0, 1, 0, 0,
+    // 0, 0, 1, 0, 3, 0,    0, 3, 0, 1, 0, 0,
+    // 0, 1, 0, 1, 2, 7,    7, 2, 1, 0, 1, 0,
+    // 0, 0, 1, 0, 4, 8,    8, 4, 0, 1, 0, 0,
+    // 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    0, 0, 1, 0, 0, 3, 0,    0, 0, 0, 0, 0,
+    0, 1, 0, 1, 0, 2, 7,    0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 4, 8,    0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
